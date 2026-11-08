@@ -1,7 +1,9 @@
 
+import os
 import time
 
 import requests
+from dotenv import load_dotenv
 from terminaltables import AsciiTable
 
 from salary import predict_salary
@@ -117,8 +119,17 @@ def print_statistics_table(statistics, title):
 
 
 def main():
+    load_dotenv()
+    api_key = os.getenv("SUPERJOB_API_KEY")
+
+    if not api_key:
+        raise ValueError("Не найден SUPERJOB_API_KEY в .env")
+
     habr_statistics = get_habr_statistics(LANGUAGES)
-    superjob_statistics = get_superjob_statistics(LANGUAGES)
+    superjob_statistics = get_superjob_statistics(
+        LANGUAGES,
+        api_key,
+    )
 
     print_statistics_table(habr_statistics, "Habr Moscow")
     print()

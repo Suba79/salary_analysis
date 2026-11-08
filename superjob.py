@@ -1,8 +1,5 @@
 
-import os
-
 import requests
-from dotenv import load_dotenv
 
 from salary import predict_salary
 
@@ -24,13 +21,7 @@ def predict_rub_salary_for_superjob(vacancy):
     return predict_salary(salary_from, salary_to)
 
 
-def get_superjob_statistics(languages):
-    load_dotenv()
-    api_key = os.getenv("SUPERJOB_API_KEY")
-
-    if not api_key:
-        raise ValueError("Не найден SUPERJOB_API_KEY в .env")
-
+def get_superjob_statistics(languages, api_key):
     headers = {"X-Api-App-Id": api_key}
     url = "https://api.superjob.ru/2.0/vacancies/"
     statistics = {}
