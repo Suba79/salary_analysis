@@ -5,6 +5,16 @@ import requests
 from dotenv import load_dotenv
 
 
+SUPERJOB_MOSCOW_CITY_ID = 4
+SUPERJOB_PROGRAMMING_CATEGORY_ID = 48
+SUPERJOB_PAGE_SIZE = 100
+SUPERJOB_MAX_PAGES = 5
+REQUEST_TIMEOUT_SECONDS = 30
+
+LOWER_SALARY_MULTIPLIER = 1.2
+UPPER_SALARY_MULTIPLIER = 0.8
+
+
 def predict_rub_salary_for_superjob(vacancy):
     if vacancy.get("currency") != "rub" or vacancy.get("agreement"):
         return None
@@ -15,9 +25,9 @@ def predict_rub_salary_for_superjob(vacancy):
     if salary_from and salary_to:
         return (salary_from + salary_to) / 2
     if salary_from:
-        return salary_from * 1.2
+        return salary_from * LOWER_SALARY_MULTIPLIER
     if salary_to:
-        return salary_to * 0.8
+        return salary_to * UPPER_SALARY_MULTIPLIER
 
     return None
 
@@ -39,17 +49,20 @@ def get_superjob_statistics(languages):
         page = 0
         vacancies_found = 0
 
-        while page < 5:
+        while page < SUPERJOB_MAX_PAGES:
             params = {
                 "keyword": language,
-                "town": 4,
-                "catalogues": 48,
-                "count": 100,
+                "town": SUPERJOB_MOSCOW_CITY_ID,
+                "catalogues": SUPERJOB_PROGRAMMING_CATEGORY_ID,
+                "count": SUPERJOB_PAGE_SIZE,
                 "page": page,
             }
 
             response = requests.get(
-                url, headers=headers, params=params, timeout=30
+                url,
+                headers=headers,
+                params=params,
+                timeout=REQUEST_TIMEOUT_SECONDS,
             )
             response.raise_for_status()
 

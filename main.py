@@ -12,6 +12,15 @@ LANGUAGES = [
     "PHP", "Go", "TypeScript", "Kotlin", "Ruby",
 ]
 
+HABR_MOSCOW_CITY_ID = 678
+REQUEST_TIMEOUT_SECONDS = 30
+HABR_REQUEST_DELAY_SECONDS = 2
+HABR_RETRY_DELAY_SECONDS = 5
+HABR_MAX_REQUEST_ATTEMPTS = 3
+
+LOWER_SALARY_MULTIPLIER = 1.2
+UPPER_SALARY_MULTIPLIER = 0.8
+
 
 def predict_rub_salary_for_habr(vacancy):
     salary = vacancy.get("salary") or {}
@@ -25,9 +34,9 @@ def predict_rub_salary_for_habr(vacancy):
     if salary_from is None and salary_to is None:
         return None
     if salary_from is None:
-        return salary_to * 0.8
+        return salary_to * UPPER_SALARY_MULTIPLIER
     if salary_to is None:
-        return salary_from * 1.2
+        return salary_from * LOWER_SALARY_MULTIPLIER
 
     return (salary_from + salary_to) / 2
 
@@ -44,23 +53,25 @@ def get_habr_statistics(languages):
         while True:
             params = {
                 "q": f"Программист {language}",
-                "city_id": 678,
+                "city_id": HABR_MOSCOW_CITY_ID,
                 "page": page,
             }
 
-            time.sleep(2)
+            time.sleep(HABR_REQUEST_DELAY_SECONDS)
 
-            for attempt in range(3):
+            for attempt in range(1, HABR_MAX_REQUEST_ATTEMPTS + 1):
                 try:
                     response = requests.get(
-                        url, params=params, timeout=30
+                        url,
+                        params=params,
+                        timeout=REQUEST_TIMEOUT_SECONDS,
                     )
                     response.raise_for_status()
                     break
                 except requests.RequestException:
-                    if attempt == 2:
+                    if attempt == HABR_MAX_REQUEST_ATTEMPTS:
                         raise
-                    time.sleep(5)
+                    time.sleep(HABR_RETRY_DELAY_SECONDS)
 
             data = response.json()
 
