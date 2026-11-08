@@ -34,67 +34,73 @@ def predict_rub_salary_for_habr(vacancy):
     return predict_salary(salary_from, salary_to)
 
 
-def get_habr_statistics(languages):
+def get_habr_vacancies(language):
     url = "https://career.habr.com/api/frontend/vacancies"
-    statistics = {}
+    vacancies = []
+    vacancies_found = 0
+    page = 1
 
-    for language in languages:
-        total_salary = 0
-        vacancies_processed = 0
-        page = 1
-
-        while True:
-            params = {
-                "q": f"Программист {language}",
-                "city_id": HABR_MOSCOW_CITY_ID,
-                "page": page,
-            }
-
-            time.sleep(HABR_REQUEST_DELAY_SECONDS)
-
-            for attempt in range(1, HABR_MAX_REQUEST_ATTEMPTS + 1):
-                try:
-                    response = requests.get(
-                        url,
-                        params=params,
-                        timeout=REQUEST_TIMEOUT_SECONDS,
-                    )
-                    response.raise_for_status()
-                    break
-                except requests.RequestException:
-                    if attempt == HABR_MAX_REQUEST_ATTEMPTS:
-                        raise
-                    time.sleep(HABR_RETRY_DELAY_SECONDS)
-
-            data = response.json()
-
-            if page == 1:
-                vacancies_found = data["meta"]["totalResults"]
-
-            for vacancy in data["list"]:
-                salary = predict_rub_salary_for_habr(vacancy)
-
-                if salary is not None:
-                    total_salary += salary
-                    vacancies_processed += 1
-
-            if not data["list"] or page >= data["meta"]["totalPages"]:
-                break
-
-            page += 1
-
-        average_salary = (
-            int(total_salary / vacancies_processed)
-            if vacancies_processed else 0
-        )
-
-        statistics[language] = {
-            "vacancies_found": vacancies_found,
-            "vacancies_processed": vacancies_processed,
-            "average_salary": average_salary,
+    while True:
+        params = {
+            "q": f"Программист {language}",
+            "city_id": HABR_MOSCOW_CITY_ID,
+            "page": page,
         }
 
-    return statistics
+        time.sleep(HABR_REQUEST_DELAY_SECONDS)
+
+        for attempt in range(1, HABR_MAX_REQUEST_ATTEMPTS + 1):
+            try:
+                response = requests.get(
+                    url,
+                    params=params,
+                    timeout=REQUEST_TIMEOUT_SECONDS,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if attempt == HABR_MAX_REQUEST_ATTEMPTS:
+                    raise
+                time.sleep(HABR_RETRY_DELAY_SECONDS)
+
+        data = response.json()
+
+        if page == 1:
+            vacancies_found = data["meta"]["totalResults"]
+
+        vacancies.extend(data["list"])
+
+        if not data["list"] or page >= data["meta"]["totalPages"]:
+            break
+
+        page += 1
+
+    return vacancies_found, vacancies
+
+
+def calculate_habr_statistics(vacancies_found, vacancies):
+    total_salary = 0
+    vacancies_processed = 0
+
+    for vacancy in vacancies:
+        salary = predict_rub_salary_for_habr(vacancy)
+
+        if salary is None:
+            continue
+
+        total_salary += salary
+        vacancies_processed += 1
+
+    average_salary = (
+        int(total_salary / vacancies_processed)
+        if vacancies_processed else 0
+    )
+
+    return {
+        "vacancies_found": vacancies_found,
+        "vacancies_processed": vacancies_processed,
+        "average_salary": average_salary,
+    }
 
 
 def print_statistics_table(statistics, title):
@@ -125,7 +131,16 @@ def main():
     if not api_key:
         raise ValueError("Не найден SUPERJOB_API_KEY в .env")
 
-    habr_statistics = get_habr_statistics(LANGUAGES)
+    habr_statistics = {}
+
+    for language in LANGUAGES:
+        vacancies_found, vacancies = get_habr_vacancies(language)
+
+        habr_statistics[language] = calculate_habr_statistics(
+            vacancies_found,
+            vacancies,
+        )
+
     superjob_statistics = get_superjob_statistics(
         LANGUAGES,
         api_key,
