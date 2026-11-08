@@ -4,6 +4,8 @@ import os
 import requests
 from dotenv import load_dotenv
 
+from salary import predict_salary
+
 
 SUPERJOB_MOSCOW_CITY_ID = 4
 SUPERJOB_PROGRAMMING_CATEGORY_ID = 48
@@ -11,25 +13,15 @@ SUPERJOB_PAGE_SIZE = 100
 SUPERJOB_MAX_PAGES = 5
 REQUEST_TIMEOUT_SECONDS = 30
 
-LOWER_SALARY_MULTIPLIER = 1.2
-UPPER_SALARY_MULTIPLIER = 0.8
-
 
 def predict_rub_salary_for_superjob(vacancy):
     if vacancy.get("currency") != "rub" or vacancy.get("agreement"):
         return None
 
-    salary_from = vacancy.get("payment_from")
-    salary_to = vacancy.get("payment_to")
+    salary_from = vacancy.get("payment_from") or None
+    salary_to = vacancy.get("payment_to") or None
 
-    if salary_from and salary_to:
-        return (salary_from + salary_to) / 2
-    if salary_from:
-        return salary_from * LOWER_SALARY_MULTIPLIER
-    if salary_to:
-        return salary_to * UPPER_SALARY_MULTIPLIER
-
-    return None
+    return predict_salary(salary_from, salary_to)
 
 
 def get_superjob_statistics(languages):

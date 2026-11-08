@@ -4,6 +4,7 @@ import time
 import requests
 from terminaltables import AsciiTable
 
+from salary import predict_salary
 from superjob import get_superjob_statistics
 
 
@@ -18,9 +19,6 @@ HABR_REQUEST_DELAY_SECONDS = 2
 HABR_RETRY_DELAY_SECONDS = 5
 HABR_MAX_REQUEST_ATTEMPTS = 3
 
-LOWER_SALARY_MULTIPLIER = 1.2
-UPPER_SALARY_MULTIPLIER = 0.8
-
 
 def predict_rub_salary_for_habr(vacancy):
     salary = vacancy.get("salary") or {}
@@ -31,14 +29,7 @@ def predict_rub_salary_for_habr(vacancy):
     salary_from = salary.get("from")
     salary_to = salary.get("to")
 
-    if salary_from is None and salary_to is None:
-        return None
-    if salary_from is None:
-        return salary_to * UPPER_SALARY_MULTIPLIER
-    if salary_to is None:
-        return salary_from * LOWER_SALARY_MULTIPLIER
-
-    return (salary_from + salary_to) / 2
+    return predict_salary(salary_from, salary_to)
 
 
 def get_habr_statistics(languages):
